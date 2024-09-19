@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscar documento</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #output {
+            margin-top: 20px;
+        }
+        input, button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="my-4">Buscar documento</h1>
+
+        <!-- Formulario para buscar el término -->
+        <div class="form-group">
+            <input type="text" id="searchTerm" class="form-control" placeholder="Escribe el término a buscar (más de 8 dígitos)" />
+        </div>
+        <button class="btn btn-success" onclick="searchInExcel()">Buscar documento</button>
+
+        <!-- Área donde se mostrarán los resultados de la búsqueda -->
+        <div id="output" class="mt-3"></div>
+    </div>
+
+    <script>
+        // Variables para almacenar los datos de ambos Excel precargados
+        let jsonDataEstudiantes = [];
+        let jsonDataDocentes = [];
+
+        // Función para cargar los dos archivos Excel al cargar la página
+        window.onload = function() {
+            // Cargar 'datos.xlsx' para estudiantes
+            fetch('datos.xlsx') // Coloca aquí la ruta de tu archivo 'datos.xlsx'
+                .then(response => response.arrayBuffer())
+                .then(data => {
+                    var workbook = XLSX.read(data, { type: 'array' });
+                    var sheetName = workbook.SheetNames[0]; // Solo la primera hoja
+                    var sheet = workbook.Sheets[sheetName];
+                    
+                    // Convertir la hoja a formato JSON
+                    jsonDataEstudiantes = XLSX.utils.sheet_to_json(sheet);
+                    console.log('Archivo "datos.xlsx" cargado correctamente.');
+                })
+                .catch(error => {
+                    console.error('Error al cargar el archivo "datos.xlsx":', error);
+                });
+
+            // Cargar 'docentes.xlsx' para docentes
+            fetch('docentes.xlsx') // Coloca aquí la ruta de tu archivo 'docentes.xlsx'
+                .then(response => response.arrayBuffer())
+                .then(data => {
+                    var workbook = XLSX.read(data, { type: 'array' });
+                    var sheetName = workbook.SheetNames[0]; // Solo la primera hoja
+                    var sheet = workbook.Sheets[sheetName];
+                    
+                    // Convertir la hoja a formato JSON
+                    jsonDataDocentes = XLSX.utils.sheet_to_json(sheet);
+                    console.log('Archivo "docentes.xlsx" cargado correctamente.');
+                })
+                .catch(error => {
+                    console.error('Error al cargar el archivo "docentes.xlsx":', error);
+                });
+        };
+
+        // Función para buscar en los archivos Excel precargados
+        function searchInExcel() {
+            var searchTerm = document.getElementById('searchTerm').value.trim().toLowerCase(); // Quitar espacios innecesarios y pasar a minúsculas
+            var output = document.getElementById('output');
+
+            // Limpiar el contenido anterior del output
+            output.innerHTML = '';
+
+            // Verificar si se ha ingresado un término de búsqueda
+            if (!searchTerm) {
+                output.innerHTML = '<div class="alert alert-warning">Por favor, ingresa un término válido.</div>';
+                return;
+            }
+
+            // Verificar que el término tenga al menos 8 caracteres después de quitar espacios
+            if (searchTerm.length < 8) {
+                output.innerHTML = '<div class="alert alert-warning">El término de búsqueda debe tener más de 8 dígitos.</div>';
+                return;
+            }
+
+            // Buscar en el archivo de estudiantes (datos.xlsx)
+            var foundInEstudiantes = jsonDataEstudiantes.some(row => {
+                var documento = row.Documento ? row.Documento.toString().toLowerCase() : '';
+                var elemento = row.Elemento ? row.Elemento.toString().toLowerCase() : '';
+                
+                return documento.includes(searchTerm) || elemento.includes(searchTerm);
+            });
+
+            // Buscar en el archivo de docentes (docentes.xlsx)
+            var foundInDocentes = jsonDataDocentes.some(row => {
+                var documento = row.Documento ? row.Documento.toString().toLowerCase() : '';
+                var elemento = row.Elemento ? row.Elemento.toString().toLowerCase() : '';
+                
+                return documento.includes(searchTerm) || elemento.includes(searchTerm);
+            });
+
+            // Mostrar el resultado
+            if (foundInDocentes) {
+                output.innerHTML += '<div class="alert alert-primary">Docente se encuentra en la lista.</div>';
+            }
+
+            if (foundInEstudiantes) {
+                output.innerHTML += '<div class="alert alert-success">Estudiante se encuentra en la lista.</div>';
+            }
+
+            if (!foundInDocentes && !foundInEstudiantes) {     
+
+                output.innerHTML = `
+    <div>
+        <p style="color: red;"><strong>No se encuentra en el listado.</strong></p>
+        <p style="color: blue;">
+            La publicación del listado de electores estará disponible del 19 al 26 de septiembre de 2024.<br><br>
+            Cualquier impugnación de los mismos, favor dirigirse a las siguientes dependencias, durante esas fechas así:<br><br>
+            <strong>DOCENTES</strong> – a Vicerrectoría Académica o a los siguientes correos:<br>
+            Docentes tiempo completo a: <a href="mailto:asignacionpuntaje@udenar.edu.co">asignacionpuntaje@udenar.edu.co</a><br>
+            Docentes hora cátedra a: <a href="mailto:programacionacademica@udenar.edu.co">programacionacademica@udenar.edu.co</a><br><br>
+            <strong>ESTUDIANTES</strong> – a OCARA a: <a href="mailto:ocara@udenar.edu.co">ocara@udenar.edu.co</a>
+        </p>
+    </div>
+`;
+            }
+        }
+    </script>
+
+    <!-- Bootstrap JS and Popper.js (opcional para elementos interactivos de Bootstrap) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+</body>
+</html> 
